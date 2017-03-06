@@ -3,26 +3,28 @@
 
 Arduboy2 arduboy;
 
-int enemiesNum;
+int gameState;
 int lapsedTime;
+int enemiesNum;
+int nextEnemyStarts;
+int score;
+
 int playerPosX;
 int playerPosY;
+int playerSizeX;
+int playerSizeY;
 int playerLives;
-int enemy1PosX;
-int enemy1PosY;
-int enemy1IncX;
-int enemy1IncY;
-int enemy2PosX;
-int enemy2PosY;
-int enemy2IncX;
-int enemy2IncY;
+
+int iEnemy;
+int enemyPosX[8];
+int enemyPosY[8];
+int enemyIncX[8];
+int enemyIncY[8];
+int enemySizeX[8];
+int enemySizeY[8];
 
 const unsigned char playerMask[] PROGMEM = {
   0x7c, 0x6e, 0xdb, 0x9f, 0x9f, 0xdb, 0x6e, 0x7c, 
-  };
-
-const unsigned char livesMask[] PROGMEM = {
-  0x0e, 0x1b, 0x31, 0x7a, 0x3f, 0x1f, 0x0e, 0x00, 
   };
 
 const unsigned char enemy1Mask[] PROGMEM = {
@@ -33,106 +35,148 @@ const unsigned char enemy2Mask[] PROGMEM = {
   0xc1, 0x25, 0x5a, 0x24, 0x24, 0x5a, 0xa4, 0x83, 
   };
 
+const unsigned char livesMask[] PROGMEM = {
+  0x0e, 0x1b, 0x31, 0x7a, 0x3f, 0x1f, 0x0e, 0x00, 
+  };
+
 const unsigned char pointsMask[] PROGMEM = {
   0x3f, 0x09, 0x09, 0x06, 0x00, 0x1f, 0x24, 0x00, 0x24, 0x2a, 0x2a, 0x10,
   };
-  
+
 void setup() {
-  
-  arduboy.begin();
-  enemiesNum = 1;  
+
+  gameState = 0;
   lapsedTime = 0;
+  enemiesNum = 1;  
+  nextEnemyStarts = 480;
+  score = 0;
+  
   playerPosX = 60; // ( hScreen - hPlayer ) / 2
   playerPosY = 28;
+  playerSizeX = 8;
+  playerSizeY = 8;
   playerLives = 4;
-  enemy1PosX = 17;
-  enemy1PosY = 1;
-  enemy1IncX = 1;
-  enemy1IncY = 1;
-  enemy2PosX = 103;
-  enemy2PosY = 1;
-  enemy2IncX = -1;
-  enemy2IncY = 1;
-}
+  
+  enemyPosX[0] = 17;
+  enemyPosY[0] = 1;
+  enemyIncX[0] = 1;
+  enemyIncY[0] = 1;
+  enemySizeX[0] = 8;
+  enemySizeY[0] = 8;
+  
+  enemyPosX[1] = 103;
+  enemyPosY[1] = 1;
+  enemyIncX[1] = -1;
+  enemyIncY[1] = 1;
+  enemySizeX[1] = 8;
+  enemySizeY[1] = 8;
 
-void playBeep1() {
-  tone(PIN_SPEAKER_1, 440, 20);
+  enemyPosX[2] = 17;
+  enemyPosY[2] = 55;
+  enemyIncX[2] = 1;
+  enemyIncY[2] = -1;
+  enemySizeX[2] = 8;
+  enemySizeY[2] = 8;
+  
+  enemyPosX[3] = 103;
+  enemyPosY[3] = 55;
+  enemyIncX[3] = -1;
+  enemyIncY[3] = -1;
+  enemySizeX[3] = 8;
+  enemySizeY[3] = 8;
+
+  arduboy.begin();
+  arduboy.setFrameRate(60);
   }
 
-void playBeep2() {
-  tone(PIN_SPEAKER_1, 330, 20);
+void playBeep(int valFrequency) {
+  //tone(PIN_SPEAKER_1, valFrequency, 20);
   }
+
 void loop() {
 
   if (!(arduboy.nextFrame())) return;
 
   lapsedTime++;
-  if (lapsedTime==240) {
+  if ((lapsedTime%(60/enemiesNum))==0) score++;
+  
+  if (lapsedTime==nextEnemyStarts) {
     enemiesNum++;
-          tone(PIN_SPEAKER_1, 550, 150);
-
-  }
+    if (enemiesNum<4) nextEnemyStarts = lapsedTime + nextEnemyStarts + (nextEnemyStarts/2);
+    tone(PIN_SPEAKER_1, 550, 150);
+    }
 
   if (arduboy.pressed(UP_BUTTON) && playerPosY>1) playerPosY--;
   if (arduboy.pressed(DOWN_BUTTON) && playerPosY<55) playerPosY++;
   if (arduboy.pressed(LEFT_BUTTON) && playerPosX>17) playerPosX--;
   if (arduboy.pressed(RIGHT_BUTTON) && playerPosX<103) playerPosX++;
 
-  enemy1PosX += enemy1IncX;
-  enemy1PosY += enemy1IncY;
-  
-  if (enemy1PosX==17) {
-    enemy1IncX=1;
-    playBeep1();
-  }
-  if (enemy1PosX==103) {
-    enemy1IncX=-1;
-    playBeep1();
-  }
-  if (enemy1PosY==1) {
-    enemy1IncY=1;
-    playBeep1();
-  }
-  if (enemy1PosY==55) {
-    enemy1IncY=-1;
-    playBeep1();
-  }
+  if ((lapsedTime%2)==0) {
 
-  if (enemiesNum>1) {
-    enemy2PosX += enemy2IncX;
-    enemy2PosY += enemy2IncY;
-    
-    if (enemy2PosX==17) {
-      enemy2IncX=1;
-      playBeep2();
+    for (iEnemy=0;iEnemy<enemiesNum;iEnemy++) {
+
+      enemyPosX[iEnemy] += enemyIncX[iEnemy];
+      enemyPosY[iEnemy] += enemyIncY[iEnemy];
+
+      if (enemyPosX[iEnemy]==17) {
+        enemyIncX[iEnemy] = 1;
+        playBeep(440);
+        }
+      
+      if (enemyPosX[iEnemy]==103) {
+        enemyIncX[iEnemy] = -1;
+        playBeep(440);
+        }
+
+      if (enemyPosY[iEnemy]==1) {
+        enemyIncY[iEnemy] = 1;
+        playBeep(440);
+        }
+      
+      if (enemyPosY[iEnemy]==55) {
+        enemyIncY[iEnemy] = -1;
+        playBeep(440);
+        }
+      }
     }
-    if (enemy2PosX==103) {
-      enemy2IncX=-1;
-      playBeep2();
+
+  // --- Collision
+
+  for (iEnemy=0;iEnemy<enemiesNum;iEnemy++) {
+
+    if ((playerPosX<(enemyPosX[iEnemy]+enemySizeX[iEnemy]))&&((playerPosX+playerSizeX)>enemyPosX[iEnemy])&&(playerPosY<(enemyPosY[iEnemy]+enemySizeY[iEnemy]))&&((playerPosY+playerSizeY)>enemyPosY[iEnemy])) {
+      //tone(PIN_SPEAKER_1, 550, 150);
+      if (playerLives>0) playerLives--;
+      }
     }
-    if (enemy2PosY==1) {
-      enemy2IncY=1;
-      playBeep2();
-    }
-    if (enemy2PosY==55) {
-      enemy2IncY=-1;
-      playBeep2();
-    }
-  }
-  
+
   arduboy.clear();
   arduboy.drawRect(16, 0, 96, 64, WHITE);
-  arduboy.drawBitmap(playerPosX, playerPosY, playerMask, 8, 8, WHITE);
-  arduboy.drawBitmap(enemy1PosX, enemy1PosY, enemy1Mask, 8, 8, WHITE);
-  if (enemiesNum>1) arduboy.drawBitmap(enemy2PosX, enemy2PosY, enemy2Mask, 8, 8, WHITE);
+  
+  arduboy.drawRect(playerPosX, playerPosY, playerSizeX, playerSizeY, WHITE); //arduboy.drawBitmap(playerPosX, playerPosY, playerMask, 8, 8, WHITE);
+
+  for (iEnemy=0;iEnemy<enemiesNum;iEnemy++) {
+    arduboy.fillRect(enemyPosX[iEnemy], enemyPosY[iEnemy], enemySizeX[iEnemy], enemySizeY[iEnemy], WHITE); //arduboy.drawBitmap(enemy1PosX, enemy1PosY, enemy1Mask, 8, 8, WHITE);  
+    }
+  
   if (playerLives>3) arduboy.drawBitmap(4, 12, livesMask, 8, 8, WHITE);
   if (playerLives>2) arduboy.drawBitmap(4, 23, livesMask, 8, 8, WHITE);
   if (playerLives>1) arduboy.drawBitmap(4, 34, livesMask, 8, 8, WHITE);
   if (playerLives>0) arduboy.drawBitmap(4, 45, livesMask, 8, 8, WHITE);
+  
   arduboy.drawRect(0,0,15,10,WHITE);
   arduboy.drawRect(0,54,15,10,WHITE);
   arduboy.drawRect(113,0,15,10,WHITE);
   arduboy.drawRect(113,54,15,10,WHITE);
   arduboy.drawBitmap(115, 12, pointsMask, 12, 8, WHITE);
+  arduboy.setCursor(118,21);
+  arduboy.print(score/1000);
+  arduboy.setCursor(118,29);
+  arduboy.print((score/100)%10);
+  arduboy.setCursor(118,37);
+  arduboy.print((score/10)%10);
+  arduboy.setCursor(118,45);
+  arduboy.print(score%10);
+  
   arduboy.display();
-}
+  }
